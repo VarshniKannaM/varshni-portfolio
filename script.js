@@ -107,16 +107,24 @@ const video = document.getElementById("heroVideo");
 const CONFIG = {
   axis: "y",       // "y": cursor top->bottom moves through the video. "x": left->right
   reverse: false,  // true flips direction
-  frames: 90,      // max frames pre-captured (more = smoother, uses more memory)
+  frames: 120,     // max frames kept in memory (more = smoother, uses more memory)
   smooth: 7        // spring stiffness: lower = floatier/smoother (4), higher = snappier (12)
 };
 
 if (stage && !reduce) {
+  let lx = 50, ly = 40, queued = false;
   addEventListener("pointermove", e => {
     const r = stage.getBoundingClientRect();
-    stage.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
-    stage.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
-  });
+    lx = ((e.clientX - r.left) / r.width) * 100;
+    ly = ((e.clientY - r.top) / r.height) * 100;
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      stage.style.setProperty("--mx", `${lx}%`);
+      stage.style.setProperty("--my", `${ly}%`);
+      queued = false;
+    });
+  }, { passive: true });
 }
 
 if (video) {
@@ -130,31 +138,45 @@ if (video) {
       startScrub(frames);
     } catch (err) {
       console.warn("Scrub disabled, looping video instead:", err);
+      video.loop = true;
       video.play().catch(() => {});
     }
   };
   video.readyState >= 2 ? init() : video.addEventListener("loadeddata", init, { once: true });
 
-  // Pre-render frames into memory so scrubbing is instant (no slow video seeking)
+  // Record every real frame while the video plays once (seeking is unreliable and gives duplicate frames)
   async function captureFrames() {
+    if (!video.requestVideoFrameCallback) throw new Error("requestVideoFrameCallback not supported");
     const dur = video.duration;
-    const n = Math.min(CONFIG.frames, Math.max(2, Math.round(dur * 24)));
-    const s = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+    const s = Math.min(1, 512 / Math.max(video.videoWidth, video.videoHeight));
     const w = Math.round(video.videoWidth * s), h = Math.round(video.videoHeight * s);
-    video.pause();
+    const step = Math.max(1, Math.floor((dur * 30) / CONFIG.frames));   // keep every Nth frame
     const frames = [];
-    for (let i = 0; i < n; i++) {
-      await new Promise(res => {
-        const done = () => { video.removeEventListener("seeked", done); res(); };
-        video.addEventListener("seeked", done);
-        video.currentTime = (i / (n - 1)) * (dur - 0.05);
-        setTimeout(done, 700);              // safety net
-      });
+    let count = 0;
+
+    video.pause();
+    video.currentTime = 0;
+    await new Promise(res => { video.addEventListener("seeked", res, { once: true }); setTimeout(res, 300); });
+    video.loop = false;
+    video.muted = true;
+
+    const grab = () => {
       const c = document.createElement("canvas");
       c.width = w; c.height = h;
       c.getContext("2d").drawImage(video, 0, 0, w, h);
       frames.push(c);
-    }
+    };
+    await new Promise(res => {
+      const onFrame = () => {
+        if (count++ % step === 0) grab();
+        if (!video.ended) video.requestVideoFrameCallback(onFrame);
+      };
+      video.addEventListener("ended", () => { grab(); res(); }, { once: true });
+      setTimeout(res, (dur + 4) * 1000);       // safety net
+      video.requestVideoFrameCallback(onFrame);
+      video.play().catch(res);
+    });
+    if (frames.length < 8) throw new Error("too few frames captured");
     return frames;
   }
 
