@@ -1,23 +1,13 @@
-# Varshni Kanna M — AI Developer Portfolio
+# Varshni Kanna M — AI Engineer Portfolio
 
-A lightweight, responsive, static portfolio built with HTML, CSS and JavaScript.
+This repository contains the personal portfolio of **Varshni Kanna M**, an AI Engineer based in Chennai, India. It presents her experience and work across Generative AI, AI agents, RAG workflows, Voice AI, healthcare applications and automation.
 
-## Files
-- `index.html` — portfolio content
-- `styles.css` — responsive styling
-- `script.js` — small navigation interaction
+The site is a lightweight, responsive static website built with HTML, CSS and JavaScript. It includes an overview of Varshni's background, experience, projects, technical toolkit and contact details.
 
-## Deploy with Vercel
-1. Create a GitHub repository and upload these three files.
-2. Go to https://vercel.com/new
-3. Import the GitHub repository.
-4. Framework preset: `Other`
-5. Build command: leave blank.
-6. Output directory: `.` (or leave the default if Vercel detects it).
-7. Deploy.
+## Project structure
+- `index.html` — portfolio content and sections
+- `styles.css` — responsive styling and visual design
+- `script.js` — navigation and interactive behavior
+- `assets/` — portfolio media and other static assets
+- `.github/workflows/deploy-pages.yml` — GitHub Pages deployment workflow
 
-## Before publishing
-- Add your resume PDF if you want a "Download Resume" button.
-- Add project GitHub/demo links where appropriate.
-- Verify all project/company dates against your final resume.
-- Replace any project description if you want wording to match your internal/project documentation exactly.
